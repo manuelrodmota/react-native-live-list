@@ -52,12 +52,12 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/manurodriguezDL/react-native-live-list.git"
+		"url": "git+https://github.com/manuelrodmota/react-native-live-list.git"
 	},
 	"bugs": {
-		"url": "https://github.com/manurodriguezDL/react-native-live-list/issues"
+		"url": "https://github.com/manuelrodmota/react-native-live-list/issues"
 	},
-	"homepage": "https://github.com/manurodriguezDL/react-native-live-list#readme",
+	"homepage": "https://github.com/manuelrodmota/react-native-live-list#readme",
 	"author": "Manuel Rodriguez",
 	"license": "MIT",
 	"engines": {
