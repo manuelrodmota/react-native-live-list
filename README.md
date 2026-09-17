@@ -4,9 +4,6 @@
   <a href="https://www.npmjs.com/package/react-native-live-list">
     <img src="https://img.shields.io/npm/v/react-native-live-list.svg" alt="npm version" />
   </a>
-  <a href="https://www.npmjs.com/package/react-native-live-list">
-    <img src="https://img.shields.io/npm/dm/react-native-live-list" alt="npm downloads" />
-  </a>
   <a href="https://github.com/manuelrodmota/react-native-live-list/actions/workflows/ci.yml">
     <img src="https://github.com/manuelrodmota/react-native-live-list/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
