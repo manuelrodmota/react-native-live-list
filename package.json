@@ -1,6 +1,6 @@
 {
 	"name": "react-native-live-list",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Keep the on-screen rows of a React Native list live: one shared ticker, drift-free countdowns, and viewport-scoped realtime subscriptions.",
 	"main": "./lib/commonjs/index.js",
 	"module": "./lib/module/index.js",
