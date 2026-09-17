@@ -129,6 +129,20 @@ function LiveList({ items, applyUpdate }: Props) {
 }
 ```
 
+## 🎬 Example app
+
+`example/` is an Expo app that runs in Expo Go, so there is nothing to build. It is an airport departures board backed by an in-memory mock server: every flight counts down to its departure on the shared ticker (by the minute while it is far off, by the second once it is close), only the visible rows receive live updates (boarding, final call, gate changes and delays that push the departure out), flights that pass their departure time unconfirmed re-check themselves, and a **Drop connection** button shows the reconnect and backoff path. The board clock at the top runs on the same ticker.
+
+<!-- Demo video: drag the recording into this section in the GitHub editor, or link an mp4/gif committed under docs/. -->
+
+```sh
+cd example
+npm install
+npx expo start
+```
+
+Press `i` for the iOS simulator, `a` for Android, or scan the QR code with Expo Go. The app bundles the library straight from `../src`, so edits to the hooks show up with Fast Refresh.
+
 ## 📖 API
 
 ### `<TickerProvider>`
@@ -299,7 +313,6 @@ The hooks work with Jest fake timers. Two things to know:
 
 - Incremental (per-key) subscriptions for topic-based transports.
 - `react-native-live-list/sse` adapter for `react-native-sse`.
-- Example app.
 
 ## 🤝 Contributing
 

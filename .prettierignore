@@ -3,3 +3,4 @@ lib
 coverage
 package-lock.json
 .claude
+.expo

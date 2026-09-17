@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Example app under `example/`: an Expo Go airport departures board with a mock realtime server that exercises the ticker, both countdown granularities, thresholds, viewport subscriptions and reconnect behaviour.
+
 ## 0.1.0 - 2026-09-17
 
 ### Added

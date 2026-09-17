@@ -1,0 +1,15 @@
+{
+	"expo": {
+		"name": "Departures",
+		"slug": "react-native-live-list-example",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"userInterfaceStyle": "dark",
+		"newArchEnabled": true,
+		"platforms": ["ios", "android"],
+		"ios": {
+			"supportsTablet": true
+		},
+		"backgroundColor": "#05080F"
+	}
+}
