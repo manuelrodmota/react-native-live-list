@@ -24,4 +24,4 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test -- --ci
-      - run: npm publish --provenance --access public
+      - run: npm stage publish . --provenance --access public
