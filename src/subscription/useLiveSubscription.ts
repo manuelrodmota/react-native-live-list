@@ -12,7 +12,10 @@ export type LiveSubscriptionStatus = 'idle' | 'connecting' | 'open' | 'error';
 export interface SubscriptionHandle {
 	/** Report that the transport is connected. Clears the open watchdog and any pending reconnect. */
 	onOpen(): void;
-	/** Report a transport failure. Schedules a rebuild after `reconnectDelayMs`. */
+	/**
+	 * Report a transport failure. Schedules a rebuild after `reconnectDelayMs`.
+	 * Further calls for the same attempt are ignored until `onOpen` is reported.
+	 */
 	onError(error?: unknown): void;
 	/** Aborted when this attempt is torn down (keys changed, blurred, unmounted, rebuilt). */
 	signal: AbortSignal;
@@ -46,7 +49,11 @@ export interface UseLiveSubscriptionOptions<K extends Key> {
 	debounceMs?: number;
 	/** Rebuild when the app returns to the foreground, since suspended sockets die silently. Defaults to true. */
 	resubscribeOnForeground?: boolean;
-	/** Rebuild immediately if `onOpen` is not called within this time. 0 disables. Defaults to 15000. */
+	/**
+	 * Rebuild if `onOpen` is not called within this time: immediately the first
+	 * time, then after `reconnectDelayMs` with backoff like any other failure.
+	 * 0 disables. Defaults to 15000.
+	 */
 	openTimeoutMs?: number;
 	/** Delay before rebuilding after `onError`. Defaults to 5000. */
 	reconnectDelayMs?: number;
@@ -136,6 +143,7 @@ export function useLiveSubscription<K extends Key>(
 		}
 
 		let cancelled = false;
+		let failed = false;
 		let unsubscribe: Unsubscribe | void;
 		let openTimer: ReturnType<typeof setTimeout> | null = null;
 		let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -156,11 +164,12 @@ export function useLiveSubscription<K extends Key>(
 		};
 
 		const fail = (reason: SubscriptionFailureReason, error: unknown) => {
-			if (cancelled) return;
+			if (cancelled || failed) return;
+			failed = true;
 			clearOpenTimer();
 			const consecutiveErrors = ++consecutiveErrorsRef.current;
 			const retryInMs =
-				reason === 'open-timeout'
+				reason === 'open-timeout' && consecutiveErrors === 1
 					? 0
 					: backoffDelay(
 							reconnectDelayMs,
@@ -186,6 +195,7 @@ export function useLiveSubscription<K extends Key>(
 			signal: controller.signal,
 			onOpen: () => {
 				if (cancelled) return;
+				failed = false;
 				consecutiveErrorsRef.current = 0;
 				clearOpenTimer();
 				clearReconnectTimer();

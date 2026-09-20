@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import {
 	useLiveSubscription,
@@ -23,7 +23,9 @@ export function DeparturesBoard() {
 	const insets = useSafeAreaInsets();
 	const [flights, setFlights] = useState<Flight[]>(() => server.list());
 	const flightsRef = useRef(flights);
-	flightsRef.current = flights;
+	useEffect(() => {
+		flightsRef.current = flights;
+	}, [flights]);
 
 	const [live, setLive] = useState(true);
 	const [updateCount, setUpdateCount] = useState(0);

@@ -18,6 +18,8 @@ export interface Ticker {
 	/**
 	 * Registers a listener and returns its unsubscribe function. The single
 	 * shared interval starts with the first listener and stops with the last.
+	 * A listener that throws does not stop the interval or skip the others;
+	 * the error is rethrown once the tick has been delivered.
 	 */
 	subscribe(listener: TickListener): () => void;
 	/** Number of registered listeners. */
@@ -53,9 +55,16 @@ export function TickerProvider({
 		const listeners = new Set<TickListener>();
 		const now = () => Date.now() + offsetRef.current;
 		const scheduler = createAlignedScheduler(intervalMs, now, (tickNow) => {
+			const errors: unknown[] = [];
 			for (const listener of Array.from(listeners)) {
-				if (listeners.has(listener)) listener(tickNow);
+				if (!listeners.has(listener)) continue;
+				try {
+					listener(tickNow);
+				} catch (error) {
+					errors.push(error);
+				}
 			}
+			if (errors.length > 0) throw errors[0];
 		});
 
 		return {

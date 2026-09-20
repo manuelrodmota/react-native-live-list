@@ -107,6 +107,29 @@ describe('TickerProvider', () => {
 		expect(second).not.toHaveBeenCalled();
 	});
 
+	it('keeps the other listeners and the interval alive when one throws', () => {
+		const healthy = jest.fn();
+		renderHook(
+			() => {
+				useTick(() => {
+					throw new Error('boom');
+				});
+				useTick(healthy);
+			},
+			{ wrapper },
+		);
+
+		const tick = () =>
+			act(() => {
+				jest.advanceTimersByTime(1000);
+			});
+		expect(tick).toThrow('boom');
+		expect(healthy).toHaveBeenCalledWith(11_000);
+		expect(tick).toThrow('boom');
+		expect(healthy).toHaveBeenCalledWith(12_000);
+		expect(jest.getTimerCount()).toBe(1);
+	});
+
 	it('applies clockOffsetMs to now() and tick timestamps', () => {
 		const onTick = jest.fn();
 		const { result } = renderHook(

@@ -13,7 +13,6 @@ export function sameKeySet<K>(a: readonly K[], b: readonly K[]): boolean {
 	if (setA.size !== a.length || setB.size !== b.length) {
 		return a.every((key, index) => key === b[index]);
 	}
-	if (setA.size !== setB.size) return false;
 	for (const key of setB) {
 		if (!setA.has(key)) return false;
 	}

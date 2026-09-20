@@ -7,7 +7,8 @@ export interface Scheduler {
 /**
  * Fires `onTick` on wall-clock boundaries of `intervalMs` (for 1000ms: on
  * every whole second of `now()`), re-aligning after each tick so timer drift
- * and suspended JS runtimes never accumulate.
+ * and suspended JS runtimes never accumulate. An `onTick` that throws does
+ * not stop the schedule.
  */
 export function createAlignedScheduler(
 	intervalMs: number,
@@ -34,8 +35,11 @@ export function createAlignedScheduler(
 
 	const fire = () => {
 		timer = null;
-		onTick(now());
-		if (running && timer === null) schedule();
+		try {
+			onTick(now());
+		} finally {
+			if (running && timer === null) schedule();
+		}
 	};
 
 	return {

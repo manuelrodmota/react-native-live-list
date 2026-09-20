@@ -85,6 +85,22 @@ describe('createAlignedScheduler', () => {
 		expect(ticks).toEqual([11_000]);
 	});
 
+	it('keeps scheduling when onTick throws', () => {
+		let calls = 0;
+		const scheduler = createAlignedScheduler(1000, Date.now, () => {
+			calls += 1;
+			if (calls === 1) throw new Error('boom');
+		});
+		scheduler.start();
+
+		expect(() => jest.advanceTimersByTime(750)).toThrow('boom');
+		expect(scheduler.isRunning()).toBe(true);
+		expect(jest.getTimerCount()).toBe(1);
+
+		jest.advanceTimersByTime(2000);
+		expect(calls).toBe(3);
+	});
+
 	it('rejects a non-positive interval', () => {
 		expect(() => createAlignedScheduler(0, Date.now, () => {})).toThrow(
 			RangeError,

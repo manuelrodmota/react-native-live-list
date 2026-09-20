@@ -102,6 +102,27 @@ describe('useCountdown', () => {
 		expect(result.current.minutesLeft).toBe(4);
 	});
 
+	it('settles as soon as the last threshold fires with minute granularity', () => {
+		const onThreshold = jest.fn();
+		const { result, renders } = renderCountdown({
+			deadline: T0 + 60_000,
+			options: { granularity: 'minute', thresholds: [-3], onThreshold },
+		});
+
+		advance(62_000);
+		expect(onThreshold).not.toHaveBeenCalled();
+		expect(result.current.isActive).toBe(true);
+
+		advance(1000);
+		expect(onThreshold).toHaveBeenCalledTimes(1);
+		expect(result.current.isActive).toBe(false);
+		expect(result.current.isExpired).toBe(true);
+
+		const settledRenders = renders();
+		advance(60_000);
+		expect(renders()).toBe(settledRenders);
+	});
+
 	it('fires each threshold once, including ones after the deadline', () => {
 		const onThreshold = jest.fn();
 		const { result } = renderCountdown({

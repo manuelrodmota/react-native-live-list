@@ -52,6 +52,15 @@ const UNIT_MS: Record<CountdownGranularity, number> = {
 const bucketOf = (remainingMs: number, granularity: CountdownGranularity) =>
 	Math.ceil(remainingMs / UNIT_MS[granularity]);
 
+/** Remaining ms at or below which the deadline and every threshold have passed. */
+const settleAtMs = (thresholds: readonly number[]) => {
+	let settleAt = 0;
+	for (const threshold of thresholds) {
+		settleAt = Math.min(settleAt, threshold * 1000);
+	}
+	return settleAt;
+};
+
 /**
  * Counts down to `deadline` on the shared ticker. Re-renders only when the
  * displayed unit changes, stops ticking once the deadline and every threshold
@@ -80,12 +89,8 @@ export function useCountdown(
 	const firedRef = useRef(new Set<number>());
 	const armedForRef = useRef(deadlineMs);
 
-	let minThresholdMs = 0;
-	for (const threshold of thresholds) {
-		minThresholdMs = Math.min(minThresholdMs, threshold * 1000);
-	}
 	const isActive =
-		enabled && deadlineMs !== null && remainingMs > minThresholdMs;
+		enabled && deadlineMs !== null && remainingMs > settleAtMs(thresholds);
 
 	// Re-seed the clock when (re)activating so an extended deadline is not
 	// measured against a `now` frozen while the countdown was settled.
@@ -110,7 +115,10 @@ export function useCountdown(
 
 			const remaining = deadlineMs - now;
 			const bucket = bucketOf(remaining, granularity);
-			if (bucket !== bucketRef.current) {
+			if (
+				bucket !== bucketRef.current ||
+				remaining <= settleAtMs(thresholdsRef.current)
+			) {
 				bucketRef.current = bucket;
 				setNowMs(now);
 			}

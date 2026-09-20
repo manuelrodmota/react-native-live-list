@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A listener that throws no longer stops the shared ticker or skips the other listeners; the error is rethrown after the tick.
+- `useCountdown` with `granularity: 'minute'` settles as soon as its last threshold has fired instead of at the next minute boundary.
+- `useLiveSubscription` counts one failure per attempt, so transports that report several errors while reconnecting (for example `react-native-sse`) no longer inflate `consecutiveErrors` or repeat `onError`.
+
+### Changed
+
+- Repeated open timeouts back off like other failures; only the first one rebuilds immediately.
+
 ## 0.1.1 - 2026-09-17
 
 ### Added

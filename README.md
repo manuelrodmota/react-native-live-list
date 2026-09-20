@@ -21,7 +21,7 @@ Auction feeds, live scores, flash sales, delivery tracking, crypto tickers, pres
 
 - ⏱️ **One ticker, not one per row** - A single clock-aligned interval drives every countdown on screen. It starts with the first subscriber and stops with the last.
 - 🎯 **Re-render only when it matters** - Rows update when the displayed second (or minute) changes, not on every tick, and go quiet once they expire.
-- 🕰️ **Drift-free, server-true time** - Remaining time is derived from the deadline and the clock on every tick. Pass a server offset and every row agrees with your backend.
+- 🕰️ **Drift-free, server-true time** - Remaining time is derived from the deadline and the clock, never from a decrementing counter. Pass a server offset and every row agrees with your backend.
 - 👀 **Subscribe to what is visible** - Track the viewable rows and hold exactly one realtime connection for that set, debounced against scrolling.
 - 🔌 **Bring your own transport** - SSE, WebSockets, GraphQL subscriptions or polling. You open the connection, the hooks decide when.
 - 🛡️ **Self-healing connections** - Rebuilt on foreground, on error (with optional backoff) and when a connection never opens. Focus-gated so only the active screen connects.
@@ -34,16 +34,16 @@ Screens full of realtime components tend to grow the same way: every row gets it
 
 `react-native-live-list` splits the problem in two. **Time** is handled once, at the top, and shared. **Data** is subscribed per viewport, not per dataset.
 
-| Without 🐢                                 | With ⚡                                                                                             |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| A timer per row                            | `TickerProvider` owns one interval, aligned to whole seconds.                                       |
-| Every row re-renders every tick            | `useCountdown` re-renders only when the displayed unit changes and stops once the row expires.      |
-| Countdowns drift or trust the device clock | Remaining time is recomputed from the deadline each tick. `clockOffsetMs` corrects for server time. |
-| The server never sent "closed"             | Thresholds fire once at chosen offsets, including after the deadline, so a row can re-check itself. |
-| Subscribed to rows that are off screen     | `useViewableKeys` tracks the viewable rows. `useLiveSubscription` connects for that set only.       |
-| Scrolling churns the connection            | Key changes are debounced and compared as sets before the transport is rebuilt.                     |
-| Sockets die silently in the background     | The transport is rebuilt on foreground, on error and when `onOpen` is never reported.               |
-| Every mounted tab holds its own connection | `enabled` gates the subscription, so only the focused screen connects.                              |
+| Without 🐢                                 | With ⚡                                                                                                   |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| A timer per row                            | `TickerProvider` owns one interval, aligned to whole seconds.                                             |
+| Every row re-renders every tick            | `useCountdown` re-renders only when the displayed unit changes and stops once the row expires.            |
+| Countdowns drift or trust the device clock | Remaining time is recomputed from the deadline on every update. `clockOffsetMs` corrects for server time. |
+| The server never sent "closed"             | Thresholds fire once at chosen offsets, including after the deadline, so a row can re-check itself.       |
+| Subscribed to rows that are off screen     | `useViewableKeys` tracks the viewable rows. `useLiveSubscription` connects for that set only.             |
+| Scrolling churns the connection            | Key changes are debounced and compared as sets before the transport is rebuilt.                           |
+| Sockets die silently in the background     | The transport is rebuilt on foreground, on error and when `onOpen` is never reported.                     |
+| Every mounted tab holds its own connection | `enabled` gates the subscription, so only the focused screen connects.                                    |
 
 ## 📦 Installation
 
@@ -149,7 +149,7 @@ Press `i` for the iOS simulator, `a` for Android, or scan the QR code with Expo 
 | `intervalMs`    | `number` | `1000`  | Tick period. Ticks land on whole multiples of the clock, so every countdown flips in sync. |
 | `clockOffsetMs` | `number` | `0`     | Server time minus device time. Applied to every tick and to `useCountdown`.                |
 
-The interval runs only while at least one hook is subscribed.
+The interval runs only while at least one hook is subscribed. A listener that throws does not stop the ticker or skip the other listeners; the error is rethrown after the tick so it still surfaces.
 
 ### `useCountdown(deadline, options?)`
 
@@ -165,6 +165,7 @@ The interval runs only while at least one hook is subscribed.
 Returns `{ deadlineMs, remainingMs, secondsLeft, minutesLeft, isExpired, isActive }`.
 
 - `secondsLeft` and `minutesLeft` round up and clamp at zero, like a wall clock.
+- `remainingMs` is as of the last update, so with `'minute'` granularity it moves in minute steps. Thresholds always fire on the exact tick.
 - `isActive` turns false once the deadline and every threshold have passed. The hook then unsubscribes from the ticker, and resubscribes if the deadline changes.
 - Thresholds use state rather than transitions: a row mounted five seconds after its deadline with `thresholds: [-3]` fires on the first tick. That is what a stale row needs. For a one-time cue such as a sound at ten seconds, check `remainingMs` in the callback.
 
@@ -192,23 +193,23 @@ Returns `{ viewableKeys, onViewableItemsChanged }`.
 
 ### `useLiveSubscription(options)`
 
-| Option                    | Type                            | Default            | Description                                                                                            |
-| ------------------------- | ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `keys`                    | `Key[]`                         |                    | Keys to stay subscribed to, usually `viewableKeys`.                                                    |
-| `subscribe`               | `(keys, handle) => unsubscribe` |                    | Opens the transport. May return a promise.                                                             |
-| `enabled`                 | `boolean`                       | `true`             | Hold a transport only while true. Pass screen focus here.                                              |
-| `debounceMs`              | `number`                        | `300`              | Wait for the key set to settle before rebuilding.                                                      |
-| `resubscribeOnForeground` | `boolean`                       | `true`             | Rebuild when the app returns from the background.                                                      |
-| `openTimeoutMs`           | `number`                        | `15000`            | Rebuild immediately if `handle.onOpen()` was not called in time. `0` disables.                         |
-| `reconnectDelayMs`        | `number`                        | `5000`             | Delay before rebuilding after `handle.onError()`.                                                      |
-| `maxReconnectDelayMs`     | `number`                        | `reconnectDelayMs` | Cap for exponential backoff. Equal to the base delay means no backoff.                                 |
-| `onOpen`                  | `(keys) => void`                |                    |                                                                                                        |
-| `onError`                 | `(error, info) => void`         |                    | `info` is `{ reason, consecutiveErrors, retryInMs, keys }`. `reason` is `'error'` or `'open-timeout'`. |
+| Option                    | Type                            | Default            | Description                                                                                                                                    |
+| ------------------------- | ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keys`                    | `Key[]`                         |                    | Keys to stay subscribed to, usually `viewableKeys`.                                                                                            |
+| `subscribe`               | `(keys, handle) => unsubscribe` |                    | Opens the transport. May return a promise.                                                                                                     |
+| `enabled`                 | `boolean`                       | `true`             | Hold a transport only while true. Pass screen focus here.                                                                                      |
+| `debounceMs`              | `number`                        | `300`              | Wait for the key set to settle before rebuilding.                                                                                              |
+| `resubscribeOnForeground` | `boolean`                       | `true`             | Rebuild when the app returns from the background.                                                                                              |
+| `openTimeoutMs`           | `number`                        | `15000`            | Rebuild if `handle.onOpen()` was not called in time: immediately the first time, then with the same delay and backoff as errors. `0` disables. |
+| `reconnectDelayMs`        | `number`                        | `5000`             | Delay before rebuilding after `handle.onError()`.                                                                                              |
+| `maxReconnectDelayMs`     | `number`                        | `reconnectDelayMs` | Cap for exponential backoff. Equal to the base delay means no backoff.                                                                         |
+| `onOpen`                  | `(keys) => void`                |                    |                                                                                                                                                |
+| `onError`                 | `(error, info) => void`         |                    | `info` is `{ reason, consecutiveErrors, retryInMs, keys }`. `reason` is `'error'` or `'open-timeout'`.                                         |
 
 The `handle` passed to `subscribe` has:
 
 - `onOpen()` marks the transport healthy and clears the open watchdog and any pending rebuild. A transport that recovers on its own is left alone.
-- `onError(error?)` schedules a rebuild. Call it for dropped connections too.
+- `onError(error?)` schedules a rebuild. Call it for dropped connections too. Extra calls during the same attempt are ignored, so transports that retry internally do not inflate the failure count.
 - `signal` is an `AbortSignal` that aborts when this attempt is torn down.
 
 Returns `{ status, consecutiveErrors, keys, reconnect() }`. `status` is `'idle' | 'connecting' | 'open' | 'error'`. Call `reconnect()` after refreshing credentials so the next transport picks up the new headers.

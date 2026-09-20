@@ -230,6 +230,58 @@ describe('useLiveSubscription', () => {
 		expect(transport.subscribe).toHaveBeenCalledTimes(2);
 	});
 
+	it('counts one failure per attempt even if the transport reports several', () => {
+		const transport = createTransport();
+		const onError = jest.fn();
+		const { result } = renderSubscription({
+			keys: [1],
+			subscribe: transport.subscribe,
+			reconnectDelayMs: 5000,
+			onError,
+		});
+		const first = transport.last();
+
+		act(() => {
+			first.handle.onError(new Error('closed'));
+			first.handle.onError(new Error('closed again'));
+		});
+		expect(onError).toHaveBeenCalledTimes(1);
+		expect(result.current.consecutiveErrors).toBe(1);
+
+		act(() => first.handle.onOpen());
+		act(() => first.handle.onError(new Error('closed later')));
+		expect(onError).toHaveBeenCalledTimes(2);
+		expect(result.current.consecutiveErrors).toBe(1);
+	});
+
+	it('backs off after repeated open timeouts', () => {
+		const transport = createTransport();
+		const onError = jest.fn();
+		renderSubscription({
+			keys: [1],
+			subscribe: transport.subscribe,
+			openTimeoutMs: 1000,
+			reconnectDelayMs: 500,
+			maxReconnectDelayMs: 2000,
+			onError,
+		});
+
+		advance(1000);
+		advance(1);
+		advance(1000);
+		advance(1000);
+		advance(1000);
+
+		expect(onError.mock.calls.map(([, info]) => info.retryInMs)).toEqual([
+			0, 1000, 2000,
+		]);
+		expect(transport.subscribe).toHaveBeenCalledTimes(3);
+		advance(1999);
+		expect(transport.subscribe).toHaveBeenCalledTimes(3);
+		advance(1);
+		expect(transport.subscribe).toHaveBeenCalledTimes(4);
+	});
+
 	it('lets a transport that recovers on its own live', () => {
 		const transport = createTransport();
 		const { result } = renderSubscription({
